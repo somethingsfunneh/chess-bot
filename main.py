@@ -2,251 +2,216 @@ import random
 import time
 import os
 
-class ChessPiece:
-    def __init__(self, color):
-        self.color = color
-
-class Pawn(ChessPiece):
-    pass
-
-class Rook(ChessPiece):
-    pass
-
-class Knight(ChessPiece):
-    pass
-
-class Bishop(ChessPiece):
-    pass
-
-class Queen(ChessPiece):
-    pass
-
-class King(ChessPiece):
-    pass
+# Chess piece Unicode symbols
+PIECES = {
+    'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
+    'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+}
 
 class ChessBoard:
     def __init__(self):
-        self.board = self.create_initial_board()
-        self.current_player = 'white'
-
-    def create_initial_board(self):
-        board = [[None for _ in range(8)] for _ in range(8)]
-
-        # Set up pawns
-        for col in range(8):
-            board[1][col] = Pawn('white')
-            board[6][col] = Pawn('black')
-
-        # Set up other pieces
-        piece_order = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
-        for col in range(8):
-            board[0][col] = piece_order[col]('white')
-            board[7][col] = piece_order[col]('black')
-
-        return board
+        self.board = [
+            ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
+            ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+            [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+            [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+            [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+            [' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '],
+            ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
+            ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
+        ]
 
     def display(self):
-        piece_symbols = {
-            'white': {
-                'Pawn': '♙', 'Rook': '♖', 'Knight': '♘',
-                'Bishop': '♗', 'Queen': '♕', 'King': '♔'
-            },
-            'black': {
-                'Pawn': '♟', 'Rook': '♜', 'Knight': '♞',
-                'Bishop': '♝', 'Queen': '♛', 'King': '♚'
-            }
-        }
-
-        print("  a b c d e f g h")
-        print(" ┌───────────────┐")
-        for row in range(8):
-            print(f"{8-row}│", end="")
-            for col in range(8):
-                piece = self.board[row][col]
-                if piece:
-                    symbol = piece_symbols[piece.color][piece.__class__.__name__]
+        os.system('cls' if os.name == 'nt' else 'clear')
+        print("  ａ ｂ ｃ ｄ ｅ ｆ ｇ ｈ")
+        print(" ┌───────────────────────┐")
+        for i, row in enumerate(self.board):
+            print(f"{8-i}│", end="")
+            for j, piece in enumerate(row):
+                if piece == ' ':
+                    print("▢ " if (i + j) % 2 == 0 else "▣ ", end="")
                 else:
-                    symbol = '·' if (row + col) % 2 == 0 else '·'
-                print(f"{symbol}", end=" ")
-            print(f"│{8-row}")
-        print(" └───────────────┘")
-        print("  a b c d e f g h")
+                    print(f"{PIECES[piece]} ", end="")
+            print(f"│{8-i}")
+        print(" └───────────────────────┘")
+        print("  ａ ｂ ｃ ｄ ｅ ｆ ｇ ｈ")
 
-    def is_valid_move(self, start, end):
-        # This is a simplified version. In a real chess game, you'd need to implement all the rules for each piece type.
+    def move_piece(self, start, end):
         start_row, start_col = start
         end_row, end_col = end
+        self.board[end_row][end_col] = self.board[start_row][start_col]
+        self.board[start_row][start_col] = ' '
 
-        if not (0 <= start_row < 8 and 0 <= start_col < 8 and 0 <= end_row < 8 and 0 <= end_col < 8):
+        def is_valid_move(self, start, end, current_player):
+            start_row, start_col = start
+            end_row, end_col = end
+            piece = self.board[start_row][start_col]
+
+            # Check if the piece belongs to the current player
+            if (current_player == 'white' and not piece.isupper()) or (current_player == 'black' and not piece.islower()):
+                return False
+
+            # Check if the move is within the board
+            if not (0 <= end_row < 8 and 0 <= end_col < 8):
+                return False
+
+            # Check if the destination is not occupied by a piece of the same color
+            if piece.isupper() and self.board[end_row][end_col].isupper():
+                return False
+            if piece.islower() and self.board[end_row][end_col].islower():
+                return False
+
+            # Check for pieces blocking the path
+            def is_path_clear(start, end, step_row, step_col):
+                row, col = start
+                while (row, col) != end:
+                    row += step_row
+                    col += step_col
+                    if (row, col) != end and self.board[row][col] != ' ':
+                        return False
+                return True
+
+            # Simplified piece movement rules (not considering check, en passant, castling, etc.)
+            if piece.lower() == 'p':  # Pawn
+                if piece.isupper():  # White pawn
+                    if end_col == start_col:
+                        if end_row == start_row - 1:
+                            return self.board[end_row][end_col] == ' '
+                        elif start_row == 6 and end_row == 4:
+                            return self.board[5][end_col] == ' ' and self.board[4][end_col] == ' '
+                    elif abs(end_col - start_col) == 1 and end_row == start_row - 1:
+                        return self.board[end_row][end_col].islower()  # Capture
+                else:  # Black pawn
+                    if end_col == start_col:
+                        if end_row == start_row + 1:
+                            return self.board[end_row][end_col] == ' '
+                        elif start_row == 1 and end_row == 3:
+                            return self.board[2][end_col] == ' ' and self.board[3][end_col] == ' '
+                    elif abs(end_col - start_col) == 1 and end_row == start_row + 1:
+                        return self.board[end_row][end_col].isupper()  # Capture
+                return False
+            elif piece.lower() == 'r':  # Rook
+                if start_row == end_row:
+                    step = 1 if end_col > start_col else -1
+                    return is_path_clear(start, end, 0, step)
+                elif start_col == end_col:
+                    step = 1 if end_row > start_row else -1
+                    return is_path_clear(start, end, step, 0)
+            elif piece.lower() == 'n':  # Knight
+                return (abs(start_row - end_row) == 2 and abs(start_col - end_col) == 1) or \
+                       (abs(start_row - end_row) == 1 and abs(start_col - end_col) == 2)
+            elif piece.lower() == 'b':  # Bishop
+                if abs(start_row - end_row) == abs(start_col - end_col):
+                    step_row = 1 if end_row > start_row else -1
+                    step_col = 1 if end_col > start_col else -1
+                    return is_path_clear(start, end, step_row, step_col)
+            elif piece.lower() == 'q':  # Queen
+                if start_row == end_row or start_col == end_col:
+                    step_row = 0 if start_row == end_row else (1 if end_row > start_row else -1)
+                    step_col = 0 if start_col == end_col else (1 if end_col > start_col else -1)
+                    return is_path_clear(start, end, step_row, step_col)
+                elif abs(start_row - end_row) == abs(start_col - end_col):
+                    step_row = 1 if end_row > start_row else -1
+                    step_col = 1 if end_col > start_col else -1
+                    return is_path_clear(start, end, step_row, step_col)
+            elif piece.lower() == 'k':  # King
+                return abs(start_row - end_row) <= 1 and abs(start_col - end_col) <= 1
+
             return False
 
-        piece = self.board[start_row][start_col]
-        if not piece or piece.color != self.current_player:
-            return False
+def parse_move(move_str):
+    cols = {'a': 0, 'b': 1, 'c': 2, 'd': 3, 'e': 4, 'f': 5, 'g': 6, 'h': 7}
+    start = (8 - int(move_str[1]), cols[move_str[0]])
+    end = (8 - int(move_str[3]), cols[move_str[2]])
+    return start, end
 
-        # Check if the end position is empty or contains an opponent's piece
-        if self.board[end_row][end_col] and self.board[end_row][end_col].color == self.current_player:
-            return False
+def bot_move(board, elo, bot_color):
+    valid_moves = []
+    for i in range(8):
+        for j in range(8):
+            if (bot_color == 'white' and board.board[i][j].isupper()) or (bot_color == 'black' and board.board[i][j].islower()):
+                for x in range(8):
+                    for y in range(8):
+                        if board.is_valid_move((i, j), (x, y), bot_color):
+                            valid_moves.append(((i, j), (x, y)))
 
-        return True
-
-    def make_move(self, start, end):
-        if self.is_valid_move(start, end):
-            self.board[end[0]][end[1]] = self.board[start[0]][start[1]]
-            self.board[start[0]][start[1]] = None
-            self.current_player = 'black' if self.current_player == 'white' else 'white'
-            return True
-        return False
-
-    def get_all_valid_moves(self):
-        valid_moves = []
-        for start_row in range(8):
-            for start_col in range(8):
-                for end_row in range(8):
-                    for end_col in range(8):
-                        if self.is_valid_move((start_row, start_col), (end_row, end_col)):
-                            valid_moves.append(((start_row, start_col), (end_row, end_col)))
-        return valid_moves
-
-    def is_capture(self, end_pos):
-        return self.board[end_pos[0]][end_pos[1]] is not None
-
-    def is_game_over(self):
-        # This is a simplified version. In a real chess game, you'd need to check for checkmate, stalemate, etc.
-        return len(self.get_all_valid_moves()) == 0
-
-    def is_checkmate(self):
-        # Simplified checkmate check
-        return self.is_game_over()  # In this simplified version, game over is equivalent to checkmate
-
-    def is_stalemate(self):
-        # Simplified stalemate check
-        return False  # In this simplified version, we're not implementing stalemate
-
-    def get_opponent(self):
-        return 'black' if self.current_player == 'white' else 'white'
-
-def bot_move(board, elo=900):
-    elo = min(900, max(100, elo))  # Ensure Elo is between 100 and 900
-    valid_moves = board.get_all_valid_moves()
     if not valid_moves:
         return None
 
-    # Adjust probabilities based on Elo
-    random_move_chance = linear_interpolation(0.7, 0.3, elo, 100, 900)
-    capture_chance = linear_interpolation(0.3, 0.7, elo, 100, 900)
-    developing_move_chance = linear_interpolation(0.2, 0.4, elo, 100, 900)
-    bad_move_chance = linear_interpolation(0.4, 0.2, elo, 100, 900)
-
-    # 1. Occasionally make random moves
-    if random.random() < random_move_chance:
+    if elo < 800:
+        # Very weak bot: completely random moves
         return random.choice(valid_moves)
-
-    # 2. Prioritize captures, but don't always choose the best capture
-    capture_moves = [move for move in valid_moves if board.is_capture(move[1])]
-    if capture_moves and random.random() < capture_chance:
-        return random.choice(capture_moves)
-
-    # 3. Sometimes make "developing" moves (moving pieces towards the center)
-    developing_moves = [move for move in valid_moves if is_developing_move(board, move)]
-    if developing_moves and random.random() < developing_move_chance:
-        return random.choice(developing_moves)
-
-    # 4. Occasionally make "bad" moves (moving pieces to the edge)
-    bad_moves = [move for move in valid_moves if is_bad_move(move)]
-    if bad_moves and random.random() < bad_move_chance:
-        return random.choice(bad_moves)
-
-    # 5. If none of the above, make a random move
-    return random.choice(valid_moves)
-
-def linear_interpolation(start, end, current, min_val, max_val):
-    return start + (end - start) * (current - min_val) / (max_val - min_val)
-
-def is_developing_move(board, move):
-    start, end = move
-    piece = board.board[start[0]][start[1]]
-
-    # Consider moves towards the center as developing moves
-    center_rows = [3, 4]
-    center_cols = [3, 4]
-
-    if isinstance(piece, (Pawn, Knight, Bishop)):
-        return end[0] in center_rows or end[1] in center_cols
-
-    return False
-
-def is_bad_move(move):
-    _, end = move
-    # Consider moves to the edge of the board as "bad" moves
-    return end[0] in [0, 7] or end[1] in [0, 7]
-
-def clear_console():
-    os.system('cls' if os.name == 'nt' else 'clear')
+    elif elo < 1200:
+        # Weak bot: slight preference for captures
+        capture_moves = [move for move in valid_moves if board.board[move[1][0]][move[1][1]] != ' ']
+        return random.choice(capture_moves) if capture_moves else random.choice(valid_moves)
+    elif elo < 1600:
+        # Intermediate bot: preference for center control and captures
+        center_moves = [move for move in valid_moves if 2 <= move[1][0] <= 5 and 2 <= move[1][1] <= 5]
+        capture_moves = [move for move in valid_moves if board.board[move[1][0]][move[1][1]] != ' ']
+        preferred_moves = center_moves + capture_moves
+        return random.choice(preferred_moves) if preferred_moves else random.choice(valid_moves)
+    else:
+        # Strong bot: prioritize piece development, center control, and captures
+        developed_pieces = ['N', 'B', 'Q', 'K'] if bot_color == 'white' else ['n', 'b', 'q', 'k']
+        develop_moves = [move for move in valid_moves if board.board[move[0][0]][move[0][1]] in developed_pieces]
+        center_moves = [move for move in valid_moves if 2 <= move[1][0] <= 5 and 2 <= move[1][1] <= 5]
+        capture_moves = [move for move in valid_moves if board.board[move[1][0]][move[1][1]] != ' ']
+        preferred_moves = develop_moves + center_moves + capture_moves
+        return random.choice(preferred_moves) if preferred_moves else random.choice(valid_moves)
 
 def play_chess():
     board = ChessBoard()
-    player_color = input("Choose your color (white/black): ").lower()
+
+    while True:
+        player_color = input("Choose your color (white/black): ").lower()
+        if player_color in ['white', 'black']:
+            break
+        print("Invalid choice. Please enter 'white' or 'black'.")
+
     bot_color = 'black' if player_color == 'white' else 'white'
 
     while True:
         try:
-            bot_elo = int(input("Enter bot Elo rating (100-900): "))
-            if 100 <= bot_elo <= 900:
+            bot_elo = int(input("Enter the bot's ELO rating (500-2000): "))
+            if 500 <= bot_elo <= 2000:
                 break
-            else:
-                print("Please enter a value between 100 and 900.")
+            print("Invalid ELO. Please enter a number between 500 and 2000.")
         except ValueError:
-            print("Please enter a valid number.")
+            print("Invalid input. Please enter a number.")
 
-    while not board.is_game_over():
-        clear_console()
-        print(f"Bot Elo: {bot_elo}")
-        print(f"Current player: {board.current_player.capitalize()}")
+    current_turn = 'white'
+
+    while True:
         board.display()
 
-        if board.current_player == player_color:
+        if current_turn == player_color:
             while True:
-                move = input("Enter your move (e.g., e2e4) or 'quit' to end the game: ")
-                if move.lower() == 'quit':
-                    print("Game ended by player.")
-                    return
+                move = input(f"{current_turn.capitalize()}'s move (e.g., 'e2e4'): ")
                 try:
-                    start = (8 - int(move[1]), ord(move[0]) - ord('a'))
-                    end = (8 - int(move[3]), ord(move[2]) - ord('a'))
-                    if board.make_move(start, end):
+                    start, end = parse_move(move)
+                    if board.is_valid_move(start, end, current_turn):
+                        board.move_piece(start, end)
                         break
                     else:
                         print("Invalid move. Try again.")
-                except (ValueError, IndexError):
-                    print("Invalid input. Please use the format 'e2e4'.")
+                except (ValueError, IndexError, KeyError):
+                    print("Invalid input. Try again.")
         else:
-            print("Bot is thinking...")
-            time.sleep(1)  # Simulate thinking time
-            bot_move_result = bot_move(board, bot_elo)
+            print(f"{bot_color.capitalize()} (Bot) is thinking...")
+            time.sleep(1)
+            bot_move_result = bot_move(board, bot_elo, bot_color)
             if bot_move_result:
                 start, end = bot_move_result
-                if board.make_move(start, end):
-                    print(f"Bot moved: {chr(start[1] + ord('a'))}{8-start[0]} to {chr(end[1] + ord('a'))}{8-end[0]}")
-                else:
-                    print("Bot made an invalid move. Ending the game.")
-                    break
+                board.move_piece(start, end)
+                print(f"{bot_color.capitalize()} (Bot) moved: {chr(start[1] + ord('a'))}{8-start[0]}{chr(end[1] + ord('a'))}{8-end[0]}")
             else:
-                print("Bot has no valid moves!")
+                print(f"{bot_color.capitalize()} (Bot) has no valid moves.")
                 break
 
-        time.sleep(1)  # Pause to show the move
+        current_turn = 'black' if current_turn == 'white' else 'white'
 
-    clear_console()
-    board.display()
-    print("Game Over!")
-    if board.is_checkmate():
-        print(f"Checkmate! {board.get_opponent()} wins!")
-    elif board.is_stalemate():
-        print("Stalemate! The game is a draw.")
-    else:
-        print("The game has ended.")
+    print("Game Over")
 
-# Run the game
 if __name__ == "__main__":
     play_chess()
